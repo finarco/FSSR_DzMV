@@ -1222,7 +1222,7 @@ class XMLGenerator:
     
     def _bool_to_str(self, value: bool) -> str:
         """Konvertuje bool na '0' alebo '1'."""
-        return 'true' if value else 'false'
+        return '1' if value else '0'
     
     def _num_to_str(self, value: float, allow_empty: bool = True) -> str:
         """Konvertuje číslo na string."""
