@@ -1,0 +1,15 @@
+{
+    "server": {
+        "port": 5100,
+        "host": "localhost"
+    },
+    "poppler_path": "C:\\poppler\\Library\\bin",
+    "tesseract_path": "C:\\Program Files\\Tesseract-OCR",
+    "databaza": {
+        "subor": "dmv_data.db"
+    },
+    "defaults": {
+        "rok": 2025,
+        "stat": "SK"
+    }
+}

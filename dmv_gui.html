@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMV Processor v2.0 - Daň z motorových vozidiel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1976d2; --primary-dark: #1565c0; --success: #4caf50;
+            --warning: #ff9800; --error: #f44336; --bg: #f5f5f5;
+            --bg-card: #fff; --bg-accent: #e3f2fd; --text: #212121;
+            --text-sec: #757575; --border: #e0e0e0;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
+        header h1 { font-size: 1.6em; } header p { opacity: 0.9; font-size: 0.9em; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .card { background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .card-header { background: var(--bg-accent); padding: 12px 20px; border-bottom: 1px solid var(--border); font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .card-body { padding: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85em; color: var(--text-sec); margin-bottom: 4px; }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1em; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+        .form-group.wide { grid-column: span 2; }
+        .form-group.full { grid-column: 1 / -1; }
+        button { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; font-size: 0.95em; }
+        .btn-primary { background: var(--primary); color: #fff; } .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+        .btn-danger { background: var(--error); color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85em; }
+        .status { padding: 4px 12px; border-radius: 20px; font-size: 0.85em; }
+        .status-success { background: #e8f5e9; color: var(--success); }
+        .status-warning { background: #fff3e0; color: var(--warning); }
+        .status-error { background: #ffebee; color: var(--error); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg); font-weight: 600; font-size: 0.85em; color: var(--text-sec); }
+        tr:hover { background: var(--bg-accent); }
+        .summary-row { background: var(--bg-accent) !important; font-weight: 600; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-card); border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-sec); padding: 0; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; padding: 10px 0; }
+        .checkbox-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9em; }
+        .vypocet-box { background: var(--bg-accent); border-radius: 8px; padding: 15px; margin-top: 15px; font-family: Consolas, monospace; font-size: 0.9em; }
+        .vypocet-box .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .vypocet-box .total { border-top: 2px solid var(--primary); margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 1.1em; }
+        .log-box { background: #263238; color: #aed581; padding: 15px; border-radius: 8px; font-family: Consolas, monospace; font-size: 0.85em; max-height: 120px; overflow-y: auto; }
+        .log-entry .time { color: #81d4fa; }
+        .drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 15px; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: var(--bg-accent); }
+        .drop-zone input { display: none; }
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-group { display: flex; gap: 5px; }
+        .section-title { font-weight: 600; color: var(--primary); margin: 15px 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+        .hint { font-size: 0.8em; color: var(--text-sec); margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 DMV Processor v2.0</h1>
+            <p>Spracovanie dane z motorových vozidiel pre finančnú správu SR</p>
+        </header>
+        
+        <div class="top-bar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label><strong>Rok:</strong></label>
+                <select id="rok" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border);" onchange="prepocitatVsetky()">
+                    <option value="2024" selected>2024</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="document.getElementById('pdfInput').click()">📂 Načítať PDF</button>
+                <button class="btn-success" onclick="exportXML()">📤 Exportovať XML</button>
+            </div>
+            <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(this)">
+        </div>
+        
+        <!-- Drop zone pre PDF -->
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+            <p>📄 <strong>Pretiahnite PDF súbor sem</strong> alebo kliknite pre výber</p>
+            <p style="font-size: 0.85em; color: var(--text-sec); margin-top: 5px;">Podporované: technické preukazy, zoznamy vozidiel</p>
+        </div>
+        
+        <!-- Spoločnosť -->
+        <div class="card">
+            <div class="card-header">
+                <span>🏢 Daňovník</span>
+                <span id="spolocnostStatus"></span>
+            </div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Typ osoby</label>
+                        <select id="typOsoby">
+                            <option value="PO">Právnická osoba</option>
+                            <option value="FO">Fyzická osoba</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>DIČ</label>
+                        <input type="text" id="dic" placeholder="2020123456">
+                    </div>
+                    <div class="form-group">
+                        <label>IČO</label>
+                        <input type="text" id="ico" placeholder="12345678">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn-primary btn-sm" id="btnOverit" onclick="overitSpolocnost()">🔍 Overiť v registroch</button>
+                    </div>
+                    <div class="form-group wide">
+                        <label>Obchodné meno / Priezvisko a meno</label>
+                        <input type="text" id="nazov" placeholder="Názov spoločnosti s.r.o.">
+                    </div>
+                    <div class="form-group"><label>Ulica</label><input type="text" id="ulica"></div>
+                    <div class="form-group"><label>Číslo</label><input type="text" id="cislo"></div>
+                    <div class="form-group"><label>PSČ</label><input type="text" id="psc"></div>
+                    <div class="form-group"><label>Obec</label><input type="text" id="obec"></div>
+                </div>
+                
+                <!-- Daňovník podľa § 3 zákona - r.11 -->
+                <div class="section-title">Daňovník podľa § 3 zákona (r.11)</div>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="r11a"> a) držiteľ zapísaný v doklade</label>
+                    <label><input type="checkbox" id="r11b"> b) užívateľ pri prenájme</label>
+                    <label><input type="checkbox" id="r11c"> c) užívateľ pri zamestnávateľovi</label>
+                    <label><input type="checkbox" id="r11d"> d) stála prevádzkareň / org. zložka</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Zdaňovacie obdobie podľa § 9 -->
+        <div class="card">
+            <div class="card-header">
+                <span>📅 Zdaňovacie obdobie podľa § 9</span>
+            </div>
+            <div class="card-body">
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="par9ods1"> ods. 1 - Kalendárny rok</label>
+                    <label><input type="checkbox" id="par9ods3"> ods. 3 - Zrušenie/zánik bez likvidácie</label>
+                    <label><input type="checkbox" id="par9ods4"> ods. 4 - Zrušenie s likvidáciou</label>
+                    <label><input type="checkbox" id="par9ods5"> ods. 5 - Vyhlásenie konkurzu</label>
+                    <label><input type="checkbox" id="par9ods6"> ods. 6 - Úmrtie daňovníka</label>
+                    <label><input type="checkbox" id="par9ods7"> ods. 7 - Ukončenie/prerušenie podnikania</label>
+                </div>
+                <div class="hint">Označte príslušné zdaňovacie obdobie podľa § 9 zákona 361/2014 Z.z.</div>
+            </div>
+        </div>
+        
+        <!-- Vozidlá -->
+        <div class="card">
+            <div class="card-header">
+                <span>🚙 Vozidlá (<span id="pocetVozidiel">0</span>)</span>
+                <div class="btn-group">
+                    <button class="btn-primary btn-sm" onclick="openModal()">➕ Pridať</button>
+                    <button class="btn-secondary btn-sm" onclick="prepocitatVsetky()">🔄 Prepočítať</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <table>
+                    <thead>
+                        <tr><th>EČV</th><th>Kategória</th><th>Základ</th><th>Vek</th><th>Sadzba</th><th>Mes.</th><th>r.11</th><th>Daň €</th><th></th></tr>
+                    </thead>
+                    <tbody id="vozidlaTable"></tbody>
+                    <tfoot>
+                        <tr class="summary-row">
+                            <td colspan="7" style="text-align:right;">Celková daň:</td>
+                            <td id="celkovaDan"><strong>0.00</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Log -->
+        <div class="card">
+            <div class="card-header"><span>📋 Log</span></div>
+            <div class="card-body">
+                <div class="log-box" id="logBox"><div class="log-entry"><span class="time">[--:--]</span> Pripravený</div></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pre náhľad PDF -->
+    <div class="modal" id="pdfModal">
+        <div class="modal-content" style="max-width: 1200px; height: 90vh;">
+            <div class="modal-header">
+                <h3>📄 Spracovanie PDF</h3>
+                <div class="btn-group">
+                    <button class="btn-secondary btn-sm" onclick="prevPdfPage()">◀ Predošlá</button>
+                    <span id="pdfPageInfo" style="padding: 6px 12px;">Strana 1/1</span>
+                    <button class="btn-secondary btn-sm" onclick="nextPdfPage()">Ďalšia ▶</button>
+                </div>
+                <button class="close-btn" onclick="closePdfModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="display:flex; gap:20px; height: calc(100% - 130px); overflow:hidden;">
+                <!-- Ľavá strana - náhľad PDF -->
+                <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+                    <div class="section-title">Náhľad PDF / OCR text</div>
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <button class="btn-sm" id="btnShowImage" onclick="showPdfImage()" style="background:var(--primary);color:#fff;">🖼️ Obrázok</button>
+                        <button class="btn-sm btn-secondary" id="btnShowText" onclick="showPdfText()">📝 Text</button>
+                    </div>
+                    <!-- Náhľad obrázka -->
+                    <div id="pdfImageContainer" style="flex:1; overflow:auto; background:#333; border-radius:6px; display:flex; align-items:center; justify-content:center;">
+                        <img id="pdfImage" src="" style="max-width:100%; max-height:100%; object-fit:contain;">
+                        <div id="pdfImagePlaceholder" style="color:#999; text-align:center; padding:40px;">
+                            <div style="font-size:3em;">📄</div>
+                            <div>Načítavam náhľad...</div>
+                        </div>
+                    </div>
+                    <!-- OCR text (skrytý) -->
+                    <textarea id="pdfText" style="flex:1; display:none; font-family:Consolas,monospace; font-size:0.85em; padding:10px; border:1px solid var(--border); border-radius:6px; resize:none;" readonly></textarea>
+                    <div class="hint" style="margin-top:5px;">Označte text a kliknite 📋 pri poli pre priradenie hodnoty</div>
+                </div>
+                
+                <!-- Pravá strana - formulár -->
+                <div style="width:400px; overflow-y:auto; flex-shrink:0;">
+                    <div class="section-title">Údaje spoločnosti</div>
+                    <div class="form-grid" style="gap:8px; grid-template-columns: 1fr 1fr;">
+                        <div class="form-group">
+                            <label>DIČ</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="text" id="pdfDic" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfDic')" title="Priradiť označený text">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>IČO</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="text" id="pdfIco" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfIco')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Názov</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="text" id="pdfNazov" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfNazov')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Ulica</label><div style="display:flex; gap:3px;"><input type="text" id="pdfUlica" style="flex:1; padding:6px;"><button class="btn-secondary btn-sm" onclick="assignSelected('pdfUlica')">📋</button></div></div>
+                        <div class="form-group"><label>Číslo</label><div style="display:flex; gap:3px;"><input type="text" id="pdfCislo" style="flex:1; padding:6px;"><button class="btn-secondary btn-sm" onclick="assignSelected('pdfCislo')">📋</button></div></div>
+                        <div class="form-group"><label>PSČ</label><div style="display:flex; gap:3px;"><input type="text" id="pdfPsc" style="flex:1; padding:6px;"><button class="btn-secondary btn-sm" onclick="assignSelected('pdfPsc')">📋</button></div></div>
+                        <div class="form-group"><label>Obec</label><div style="display:flex; gap:3px;"><input type="text" id="pdfObec" style="flex:1; padding:6px;"><button class="btn-secondary btn-sm" onclick="assignSelected('pdfObec')">📋</button></div></div>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top:15px;">Vozidlo</div>
+                    <div class="form-grid" style="gap:8px; grid-template-columns: 1fr 1fr;">
+                        <div class="form-group">
+                            <label>EČV</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="text" id="pdfEvc" style="flex:1; padding:6px;" placeholder="BA123AB">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfEvc')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Kategória</label>
+                            <select id="pdfKategoria" style="padding:6px;">
+                                <option value="M1">M1 - Osobné</option>
+                                <option value="N1">N1 - Nákladné</option>
+                                <option value="L">L - Motocykel</option>
+                                <option value="O1">O1 - Príves</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prvá evidencia</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="text" id="pdfDatumEv" placeholder="dd.mm.rrrr" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfDatumEv')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Objem cm³</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="number" id="pdfObjem" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfObjem')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Hmotnosť kg</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="number" id="pdfHmotnost" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfHmotnost')">📋</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Výkon kW</label>
+                            <div style="display:flex; gap:3px;">
+                                <input type="number" id="pdfVykon" style="flex:1; padding:6px;">
+                                <button class="btn-secondary btn-sm" onclick="assignSelected('pdfVykon')">📋</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                        <button class="btn-primary btn-sm" onclick="addVehicleFromPdf()">➕ Pridať vozidlo</button>
+                        <button class="btn-secondary btn-sm" onclick="clearPdfVehicle()">🗑️ Vyčistiť</button>
+                        <button class="btn-secondary btn-sm" onclick="savePattern()" title="Uložiť vzor pre budúce učenie">💾 Uložiť vzor</button>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top:15px;">Pridané vozidlá (<span id="pdfVozidlaCount">0</span>)</div>
+                    <div id="pdfVozidlaList" style="max-height:150px; overflow-y:auto; background:var(--bg); border-radius:6px; padding:5px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closePdfModal()">Zrušiť</button>
+                <button class="btn-success" onclick="applyPdfData()">✓ Použiť údaje</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pre vozidlo -->
+    <div class="modal" id="vozidloModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Vozidlo</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group"><label>EČV</label><input type="text" id="vEvc" placeholder="BA123AB"></div>
+                    <div class="form-group">
+                        <label>Kategória</label>
+                        <select id="vKategoria" onchange="onKatChange(); prepocitat();">
+                            <option value="M1">M1 - Osobné</option>
+                            <option value="L">L - Motocykel</option>
+                            <option value="N1">N1 - Nákladné do 3.5t</option>
+                            <option value="N2">N2 - Nákladné 3.5-12t</option>
+                            <option value="N3">N3 - Nákladné nad 12t</option>
+                            <option value="O1">O1 - Príves do 0.75t</option>
+                            <option value="O2">O2 - Príves 0.75-3.5t</option>
+                            <option value="O3">O3 - Príves 3.5-10t</option>
+                            <option value="O4">O4 - Príves nad 10t</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Prvá evidencia</label><input type="text" id="vDatum" placeholder="15.3.2020" onchange="prepocitat()"></div>
+                    <div class="form-group"><label>Vznik povinnosti</label><input type="text" id="vDatumVzniku"></div>
+                    <div class="form-group" id="objemGroup"><label>Objem cm³</label><input type="number" id="vObjem" placeholder="1998" onchange="prepocitat()"></div>
+                    <div class="form-group" id="hmotnostGroup" style="display:none;"><label>Hmotnosť kg</label><input type="number" id="vHmotnost" onchange="prepocitat()"></div>
+                    <div class="form-group"><label>Počet náprav</label><select id="vNapravy"><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+                    <div class="form-group"><label>Mesiacov</label><input type="number" id="vMesiace" value="12" min="1" max="12" onchange="prepocitat()"></div>
+                </div>
+                
+                <!-- Daňovník podľa § 3 - r.11 pre vozidlo -->
+                <div class="section-title">Daňovník podľa § 3 (r.11)</div>
+                <div class="checkbox-group">
+                    <label><input type="radio" name="vR11" id="vR11a" value="a" checked> a) držiteľ</label>
+                    <label><input type="radio" name="vR11" id="vR11b" value="b"> b) prenájom</label>
+                    <label><input type="radio" name="vR11" id="vR11c" value="c"> c) zamestnanec</label>
+                    <label><input type="radio" name="vR11" id="vR11d" value="d"> d) org. zložka</label>
+                </div>
+                
+                <div class="section-title">Pohon / Zníženia</div>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="vHybrid" onchange="prepocitat()"> Hybrid -50%</label>
+                    <label><input type="checkbox" id="vPlyn" onchange="prepocitat()"> CNG/LPG -50%</label>
+                    <label><input type="checkbox" id="vKombi" onchange="prepocitat()"> Kombi doprava -50%</label>
+                </div>
+                
+                <div class="vypocet-box">
+                    <div class="row"><span>Základná sadzba:</span><span id="calcZakladna">- €</span></div>
+                    <div class="row" id="calcVekRow" style="display:none;"><span>Úprava vek:</span><span id="calcVek">-</span></div>
+                    <div class="row" id="calcEkoRow" style="display:none;"><span>Eko zníženie:</span><span id="calcEko">-50%</span></div>
+                    <div class="row total"><span>DAŇ (zaokr. nadol):</span><span id="calcDan">0.00 €</span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">Zrušiť</button>
+                <button class="btn-primary" onclick="ulozitVozidlo()">✓ Uložiť</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5100/api';
+        let vozidla = [];
+        let editIndex = -1;
+
+        // Sadzby
+        const SADZBY_M1 = [{od:0,do:150,s:50},{od:150,do:900,s:62},{od:900,do:1200,s:80},{od:1200,do:1500,s:115},{od:1500,do:2000,s:148},{od:2000,do:3000,s:180},{od:3000,do:Infinity,s:218}];
+        const SADZBY_O = {O1:50, O2:115, O3:180, O4:295};
+        const SADZBY_N1 = [{od:0,do:2000,s:115},{od:2000,do:4000,s:148},{od:4000,do:6000,s:180},{od:6000,do:8000,s:218},{od:8000,do:10000,s:253},{od:10000,do:12000,s:295}];
+        const UPRAVA_2024 = [{od:0,do:36,k:0.75},{od:36,do:72,k:0.80},{od:72,do:108,k:0.85},{od:108,do:144,k:1.00},{od:144,do:156,k:1.10},{od:156,do:Infinity,k:1.20}];
+        const UPRAVA_2025 = [{od:0,do:36,k:1.00},{od:36,do:72,k:1.10},{od:72,do:108,k:1.20},{od:108,do:144,k:1.30},{od:144,do:180,k:1.40},{od:180,do:Infinity,k:1.50}];
+
+        // Zaokrúhlenie nadol na 2 desatinné miesta
+        function zaokruhliNadol(num) {
+            return Math.floor(num * 100) / 100;
+        }
+
+        // Log
+        function log(msg) {
+            const box = document.getElementById('logBox');
+            const time = new Date().toLocaleTimeString('sk-SK', {hour:'2-digit', minute:'2-digit'});
+            box.innerHTML += `<div class="log-entry"><span class="time">[${time}]</span> ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // === OVERENIE SPOLOČNOSTI ===
+        async function overitSpolocnost() {
+            const dic = document.getElementById('dic').value.trim();
+            const ico = document.getElementById('ico').value.trim();
+            
+            if (!dic && !ico) { alert('Zadajte DIČ alebo IČO'); return; }
+            
+            const btn = document.getElementById('btnOverit');
+            btn.innerHTML = '<span class="loading"></span> Overujem...';
+            btn.disabled = true;
+            document.getElementById('spolocnostStatus').innerHTML = '<span class="status status-warning">Overujem...</span>';
+            log('Overujem spoločnosť v registroch...');
+            
+            try {
+                const response = await fetch(`${API_URL}/overit?ico=${encodeURIComponent(ico || dic)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const d = result.data;
+                    if (d.dic) document.getElementById('dic').value = d.dic;
+                    if (d.ico) document.getElementById('ico').value = d.ico;
+                    if (d.nazov) document.getElementById('nazov').value = d.nazov;
+                    if (d.ulica) document.getElementById('ulica').value = d.ulica;
+                    if (d.cislo) document.getElementById('cislo').value = d.cislo;
+                    if (d.psc) document.getElementById('psc').value = d.psc;
+                    if (d.obec) document.getElementById('obec').value = d.obec;
+                    
+                    document.getElementById('spolocnostStatus').innerHTML = `<span class="status status-success">✓ ${result.source}</span>`;
+                    log(`Nájdené v ${result.source}: ${d.nazov}`);
+                } else {
+                    document.getElementById('spolocnostStatus').innerHTML = '<span class="status status-error">✗ Nenájdené</span>';
+                    log('Spoločnosť nenájdená v registroch');
+                }
+            } catch (e) {
+                document.getElementById('spolocnostStatus').innerHTML = '<span class="status status-error">✗ Chyba</span>';
+                log('Chyba pripojenia. Spustite: python dmv_server.py');
+                console.error(e);
+            }
+            
+            btn.innerHTML = '🔍 Overiť v registroch';
+            btn.disabled = false;
+        }
+
+        // === PDF MODAL ===
+        let pdfVozidlaTemp = [];
+        let pdfExtractedText = '';
+        let pdfImages = [];
+        let currentPdfPage = 0;
+        let savedPatterns = JSON.parse(localStorage.getItem('dmvPatterns') || '[]');
+        
+        function openPdfModal(text, extractedData, images) {
+            pdfVozidlaTemp = [];
+            pdfExtractedText = text || '';
+            pdfImages = images || [];
+            currentPdfPage = 0;
+            
+            document.getElementById('pdfText').value = text || '[Žiadny text]';
+            
+            // Vyčisti formulár
+            ['pdfDic','pdfIco','pdfNazov','pdfUlica','pdfCislo','pdfPsc','pdfObec','pdfEvc','pdfDatumEv','pdfObjem','pdfHmotnost','pdfVykon'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            
+            // Predvyplň údaje ak boli extrahované
+            if (extractedData) {
+                if (extractedData.spolocnost) {
+                    const s = extractedData.spolocnost;
+                    if (s.dic) document.getElementById('pdfDic').value = s.dic;
+                    if (s.ico) document.getElementById('pdfIco').value = s.ico;
+                    if (s.nazov) document.getElementById('pdfNazov').value = s.nazov;
+                    if (s.ulica) document.getElementById('pdfUlica').value = s.ulica;
+                    if (s.cislo) document.getElementById('pdfCislo').value = s.cislo;
+                    if (s.psc) document.getElementById('pdfPsc').value = s.psc;
+                    if (s.obec) document.getElementById('pdfObec').value = s.obec;
+                }
+                if (extractedData.vozidla && extractedData.vozidla.length > 0) {
+                    pdfVozidlaTemp = extractedData.vozidla;
+                }
+            }
+            
+            // Zobraz obrázok ak existuje
+            updatePdfImage();
+            
+            // Skús automaticky nájsť vzory v texte
+            if (text) {
+                autoDetectPatterns(text);
+                applyLearnedPatterns(text);
+            }
+            
+            refreshPdfVozidlaList();
+            document.getElementById('pdfModal').classList.add('active');
+        }
+        
+        function updatePdfImage() {
+            const img = document.getElementById('pdfImage');
+            const placeholder = document.getElementById('pdfImagePlaceholder');
+            const pageInfo = document.getElementById('pdfPageInfo');
+            
+            console.log('updatePdfImage: pdfImages.length =', pdfImages.length, 'currentPdfPage =', currentPdfPage);
+            
+            if (pdfImages && pdfImages.length > 0 && pdfImages[currentPdfPage]) {
+                const imgData = pdfImages[currentPdfPage];
+                console.log('Image data length:', imgData.length);
+                
+                img.onerror = function() {
+                    console.error('Chyba načítania obrázka');
+                    img.style.display = 'none';
+                    placeholder.style.display = 'block';
+                    placeholder.innerHTML = '<div style="font-size:3em;">⚠️</div><div>Chyba načítania obrázka</div>';
+                };
+                
+                img.onload = function() {
+                    console.log('Obrázok načítaný úspešne');
+                };
+                
+                img.src = 'data:image/png;base64,' + imgData;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+                pageInfo.textContent = `Strana ${currentPdfPage + 1}/${pdfImages.length}`;
+            } else {
+                console.log('Žiadne obrázky k dispozícii');
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+                placeholder.innerHTML = '<div style="font-size:3em;">📄</div><div>Náhľad nie je dostupný</div><div style="font-size:0.8em; margin-top:10px;">Prepnite na "📝 Text" pre OCR výstup</div>';
+                pageInfo.textContent = 'Strana 0/0';
+            }
+        }
+        
+        function prevPdfPage() {
+            if (currentPdfPage > 0) {
+                currentPdfPage--;
+                updatePdfImage();
+            }
+        }
+        
+        function nextPdfPage() {
+            if (currentPdfPage < pdfImages.length - 1) {
+                currentPdfPage++;
+                updatePdfImage();
+            }
+        }
+        
+        function showPdfImage() {
+            document.getElementById('pdfImageContainer').style.display = 'flex';
+            document.getElementById('pdfText').style.display = 'none';
+            document.getElementById('btnShowImage').style.background = 'var(--primary)';
+            document.getElementById('btnShowImage').style.color = '#fff';
+            document.getElementById('btnShowText').style.background = '';
+            document.getElementById('btnShowText').style.color = '';
+        }
+        
+        function showPdfText() {
+            document.getElementById('pdfImageContainer').style.display = 'none';
+            document.getElementById('pdfText').style.display = 'block';
+            document.getElementById('btnShowText').style.background = 'var(--primary)';
+            document.getElementById('btnShowText').style.color = '#fff';
+            document.getElementById('btnShowImage').style.background = '';
+            document.getElementById('btnShowImage').style.color = '';
+        }
+        
+        function closePdfModal() {
+            document.getElementById('pdfModal').classList.remove('active');
+            pdfVozidlaTemp = [];
+            pdfImages = [];
+        }
+        
+        function autoDetectPatterns(text) {
+            // DIČ
+            const dicMatch = text.match(/DI[ČC][\s:]*(\d{10})/i) || text.match(/(\d{10})/);
+            if (dicMatch && !document.getElementById('pdfDic').value) {
+                const dic = dicMatch[1];
+                if (dic.startsWith('20')) document.getElementById('pdfDic').value = dic;
+            }
+            
+            // IČO
+            const icoMatch = text.match(/I[ČC]O[\s:]*(\d{8})/i) || text.match(/(?:^|\s)(\d{8})(?:\s|$)/);
+            if (icoMatch && !document.getElementById('pdfIco').value) {
+                document.getElementById('pdfIco').value = icoMatch[1];
+            }
+            
+            // EČV - slovenské formáty (BA 123 AB, BA123AB, atď.)
+            const ecvPatterns = [
+                /([A-Z]{2}\s*\d{3}\s*[A-Z]{2})/gi,
+                /([A-Z]{2}-\d{3}-[A-Z]{2})/gi,
+                /EČV[\s:]*([A-Z0-9\s-]+)/i
+            ];
+            for (const pattern of ecvPatterns) {
+                const match = text.match(pattern);
+                if (match && !document.getElementById('pdfEvc').value) {
+                    document.getElementById('pdfEvc').value = match[1].replace(/[\s-]/g, '').toUpperCase();
+                    break;
+                }
+            }
+            
+            // Dátum prvej evidencie - hľadaj rôzne formáty
+            const datumPatterns = [
+                /(?:prv[áa]\s*evidencia|dátum\s*1\.\s*evid|first\s*reg)[\s:]*(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/i,
+                /(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/
+            ];
+            for (const pattern of datumPatterns) {
+                const match = text.match(pattern);
+                if (match && !document.getElementById('pdfDatumEv').value) {
+                    document.getElementById('pdfDatumEv').value = `${match[1].padStart(2,'0')}.${match[2].padStart(2,'0')}.${match[3]}`;
+                    break;
+                }
+            }
+            
+            // Objem valcov
+            const objemPatterns = [
+                /(?:objem|zdvih|displacement)[\s:]*(\d{3,4})\s*(?:cm|cc)/i,
+                /(\d{3,4})\s*(?:cm[³3]|ccm)/i
+            ];
+            for (const pattern of objemPatterns) {
+                const match = text.match(pattern);
+                if (match && !document.getElementById('pdfObjem').value) {
+                    document.getElementById('pdfObjem').value = match[1];
+                    break;
+                }
+            }
+            
+            // Hmotnosť
+            const hmotnostPatterns = [
+                /(?:hmotnos[ťt]|max\.?\s*hm|mass)[\s:]*(\d{3,5})\s*kg/i,
+                /(\d{3,5})\s*kg/i
+            ];
+            for (const pattern of hmotnostPatterns) {
+                const match = text.match(pattern);
+                if (match && !document.getElementById('pdfHmotnost').value) {
+                    document.getElementById('pdfHmotnost').value = match[1];
+                    break;
+                }
+            }
+            
+            // Výkon
+            const vykonMatch = text.match(/(?:v[ýy]kon|power)[\s:]*(\d{2,3})\s*kW/i) || text.match(/(\d{2,3})\s*kW/i);
+            if (vykonMatch && !document.getElementById('pdfVykon').value) {
+                document.getElementById('pdfVykon').value = vykonMatch[1];
+            }
+            
+            // PSČ
+            const pscMatch = text.match(/(\d{3}\s*\d{2})/);
+            if (pscMatch && !document.getElementById('pdfPsc').value) {
+                document.getElementById('pdfPsc').value = pscMatch[1].replace(/\s/g, '');
+            }
+            
+            // Kategória
+            const katMatch = text.match(/(?:kateg[óo]ria|category)[\s:]*([LMNO]\d?)/i);
+            if (katMatch) {
+                const kat = katMatch[1].toUpperCase();
+                document.getElementById('pdfKategoria').value = kat;
+            }
+        }
+        
+        function applyLearnedPatterns(text) {
+            // Aplikuj naučené vzory
+            savedPatterns.forEach(pattern => {
+                try {
+                    const regex = new RegExp(pattern.regex, 'i');
+                    const match = text.match(regex);
+                    if (match && match[1]) {
+                        const el = document.getElementById(pattern.field);
+                        if (el && !el.value) {
+                            el.value = match[1];
+                            log(`Vzor "${pattern.name}" aplikovaný`);
+                        }
+                    }
+                } catch (e) {}
+            });
+        }
+        
+        function savePattern() {
+            const selectedText = window.getSelection().toString().trim();
+            if (!selectedText) {
+                alert('Najprv označte text v PDF náhľade alebo OCR texte');
+                return;
+            }
+            
+            const field = prompt('Pre ktoré pole je tento vzor?\n\nMožnosti: pdfDic, pdfIco, pdfEvc, pdfDatumEv, pdfObjem, pdfHmotnost, pdfVykon, pdfNazov, pdfUlica, pdfPsc, pdfObec');
+            if (!field) return;
+            
+            const name = prompt('Názov vzoru (pre budúcu identifikáciu):');
+            if (!name) return;
+            
+            // Vytvor regex z označeného textu - zachytí podobné hodnoty
+            let regexStr = selectedText
+                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')  // escape špeciálne znaky
+                .replace(/\d+/g, '(\\d+)');  // nahraď čísla capture group
+            
+            savedPatterns.push({ name, field, regex: regexStr, example: selectedText });
+            localStorage.setItem('dmvPatterns', JSON.stringify(savedPatterns));
+            
+            log(`Vzor "${name}" uložený pre pole ${field}`);
+            alert(`Vzor uložený!\n\nNázov: ${name}\nPole: ${field}\nRegex: ${regexStr}`);
+        }
+        
+        function assignSelected(fieldId) {
+            // Skús najprv window selection (z obrázka alebo iného miesta)
+            let selectedText = window.getSelection().toString().trim();
+            
+            // Ak nie, skús textarea selection
+            if (!selectedText) {
+                const textarea = document.getElementById('pdfText');
+                selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+            }
+            
+            if (selectedText) {
+                // Vyčisti hodnotu - odstráň medzery pre čísla
+                let cleanValue = selectedText.replace(/\s+/g, ' ');
+                if (['pdfDic', 'pdfIco', 'pdfEvc', 'pdfPsc'].includes(fieldId)) {
+                    cleanValue = cleanValue.replace(/\s/g, '');
+                }
+                document.getElementById(fieldId).value = cleanValue;
+                log(`Priradené: ${fieldId} = "${cleanValue}"`);
+            } else {
+                alert('Najprv označte text v náhľade alebo OCR texte');
+            }
+        }
+        
+        function addVehicleFromPdf() {
+            const evc = document.getElementById('pdfEvc').value.toUpperCase().replace(/\s/g, '');
+            if (!evc) {
+                alert('Zadajte EČV vozidla');
+                return;
+            }
+            
+            const rok = document.getElementById('rok').value;
+            const kategoria = document.getElementById('pdfKategoria').value;
+            const objem = parseFloat(document.getElementById('pdfObjem').value) || 0;
+            const hmotnost = parseFloat(document.getElementById('pdfHmotnost').value) || 0;
+            const datum = document.getElementById('pdfDatumEv').value;
+            
+            const zakladna = getZakladnaSadzba(kategoria, objem, hmotnost);
+            const vek = vypocitajVek(datum);
+            let sadzba = zakladna;
+            if (vek > 0 && !kategoria.startsWith('O')) {
+                sadzba = zakladna * getKoefVeku(vek);
+            }
+            const dan = zaokruhliNadol((sadzba / 12) * 12);
+            
+            pdfVozidlaTemp.push({
+                evc, kategoria, datum,
+                datumVzniku: `1.1.${rok}`,
+                objem, hmotnost, mesiace: 12,
+                hybrid: false, plyn: false, kombi: false, r11: 'a',
+                zakladnaSadzba: zakladna, sadzba, dan, vek
+            });
+            
+            refreshPdfVozidlaList();
+            clearPdfVehicle();
+            log(`Vozidlo ${evc} pridané do zoznamu`);
+        }
+        
+        function clearPdfVehicle() {
+            ['pdfEvc','pdfDatumEv','pdfObjem','pdfHmotnost','pdfVykon'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('pdfKategoria').value = 'M1';
+        }
+        
+        function removePdfVehicle(index) {
+            pdfVozidlaTemp.splice(index, 1);
+            refreshPdfVozidlaList();
+        }
+        
+        function refreshPdfVozidlaList() {
+            const container = document.getElementById('pdfVozidlaList');
+            document.getElementById('pdfVozidlaCount').textContent = pdfVozidlaTemp.length;
+            
+            if (pdfVozidlaTemp.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-sec); font-size:0.85em; padding:8px; text-align:center;">Žiadne vozidlá</div>';
+                return;
+            }
+            
+            let html = '<table style="width:100%; font-size:0.8em;"><tbody>';
+            pdfVozidlaTemp.forEach((v, i) => {
+                const zaklad = v.kategoria === 'M1' || v.kategoria === 'L' ? `${v.objem}cm³` : `${v.hmotnost}kg`;
+                html += `<tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:4px;"><strong>${v.evc}</strong></td>
+                    <td style="padding:4px;">${v.kategoria}</td>
+                    <td style="padding:4px;">${zaklad}</td>
+                    <td style="padding:4px;">${v.dan.toFixed(2)}€</td>
+                    <td style="padding:4px;"><button class="btn-danger btn-sm" style="padding:2px 6px;" onclick="removePdfVehicle(${i})">✕</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        function applyPdfData() {
+            // Aplikuj údaje spoločnosti
+            const fieldMap = {Dic:'dic', Ico:'ico', Nazov:'nazov', Ulica:'ulica', Cislo:'cislo', Psc:'psc', Obec:'obec'};
+            Object.entries(fieldMap).forEach(([pdf, main]) => {
+                const val = document.getElementById('pdf' + pdf).value;
+                if (val) document.getElementById(main).value = val;
+            });
+            
+            // Pridaj vozidlá
+            if (pdfVozidlaTemp.length > 0) {
+                vozidla = vozidla.concat(pdfVozidlaTemp);
+                refreshTable();
+                log(`Pridaných ${pdfVozidlaTemp.length} vozidiel z PDF`);
+            }
+            
+            closePdfModal();
+            log('Údaje z PDF aplikované');
+        }
+
+        // === NAČÍTANIE PDF ===
+        async function handlePdfUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            log(`Načítavam PDF: ${file.name}`);
+            document.getElementById('dropZone').innerHTML = '<p>⏳ <strong>Spracúvam... (môže trvať dlhšie pre OCR)</strong></p>';
+            
+            const rok = document.getElementById('rok').value;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1];
+                
+                try {
+                    const response = await fetch(`${API_URL}/upload-pdf`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({file: base64, rok: parseInt(rok)})
+                    });
+                    
+                    const result = await response.json();
+                    console.log('Server response:', result);
+                    console.log('Images received:', result.images ? result.images.length : 0);
+                    
+                    // Vždy otvor modal pre manuálne priradenie
+                    const extractedData = {
+                        spolocnost: result.spolocnost || {},
+                        vozidla: (result.vozidla || []).map(v => ({
+                            ...v,
+                            r11: v.r11 || 'a',
+                            dan: zaokruhliNadol(v.dan || 0)
+                        }))
+                    };
+                    
+                    // Obrázky strán PDF
+                    const images = result.images || [];
+                    console.log('Images to display:', images.length);
+                    if (images.length > 0) {
+                        console.log('First image length:', images[0].length);
+                    }
+                    
+                    openPdfModal(result.text || '[Žiadny text extrahovaný]', extractedData, images);
+                    log(`PDF spracované - ${images.length} strán, ${(result.text || '').length} znakov textu`);
+                    
+                } catch (e) {
+                    log('Chyba pripojenia k serveru');
+                    console.error('Error:', e);
+                    alert('Spustite: python dmv_server.py');
+                }
+                
+                document.getElementById('dropZone').innerHTML = '<p>📄 <strong>Pretiahnite PDF súbor sem</strong></p>';
+            };
+            reader.readAsDataURL(file);
+            input.value = '';
+        }
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.pdf')) {
+                const input = document.getElementById('pdfInput');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                handlePdfUpload(input);
+            }
+        });
+
+        // === VÝPOČTY ===
+        function getZakladnaSadzba(kat, objem, hmotnost) {
+            if (kat === 'M1' || kat === 'L') {
+                for (const s of SADZBY_M1) if (objem > s.od && objem <= s.do) return s.s;
+                return 218;
+            }
+            if (kat.startsWith('O')) return SADZBY_O[kat] || 50;
+            // N1, N2, N3 podľa hmotnosti v kg
+            for (const s of SADZBY_N1) if (hmotnost > s.od && hmotnost <= s.do) return s.s;
+            return 295;
+        }
+
+        function vypocitajVek(datumStr) {
+            if (!datumStr) return 0;
+            const p = datumStr.split('.');
+            if (p.length !== 3) return 0;
+            const rok = parseInt(document.getElementById('rok').value);
+            const d = new Date(p[2], p[1]-1, p[0]);
+            const k = new Date(rok, 11, 31);
+            return Math.max(0, (k.getFullYear()-d.getFullYear())*12 + (k.getMonth()-d.getMonth()));
+        }
+
+        function getKoefVeku(vek) {
+            const rok = parseInt(document.getElementById('rok').value);
+            const u = rok >= 2025 ? UPRAVA_2025 : UPRAVA_2024;
+            for (const x of u) if (vek >= x.od && vek < x.do) return x.k;
+            return u[u.length-1].k;
+        }
+
+        function prepocitat() {
+            const kat = document.getElementById('vKategoria').value;
+            const objem = parseFloat(document.getElementById('vObjem').value) || 0;
+            const hmotnost = parseFloat(document.getElementById('vHmotnost').value) || 0;
+            const datum = document.getElementById('vDatum').value;
+            const mesiace = parseInt(document.getElementById('vMesiace').value) || 12;
+            const hybrid = document.getElementById('vHybrid').checked;
+            const plyn = document.getElementById('vPlyn').checked;
+            const kombi = document.getElementById('vKombi').checked;
+            
+            let zakladna = getZakladnaSadzba(kat, objem, hmotnost);
+            document.getElementById('calcZakladna').textContent = zakladna + ' €';
+            
+            const vek = vypocitajVek(datum);
+            let sadzba = zakladna;
+            
+            const vekRow = document.getElementById('calcVekRow');
+            if (vek > 0 && !kat.startsWith('O')) {
+                const koef = getKoefVeku(vek);
+                sadzba = zakladna * koef;
+                const perc = Math.round((koef-1)*100);
+                vekRow.style.display = 'flex';
+                document.getElementById('calcVek').textContent = `${perc>=0?'+':''}${perc}% (${vek} mes.) = ${sadzba.toFixed(2)} €`;
+            } else {
+                vekRow.style.display = 'none';
+            }
+            
+            const ekoRow = document.getElementById('calcEkoRow');
+            if (hybrid || plyn) { sadzba *= 0.5; ekoRow.style.display = 'flex'; }
+            else { ekoRow.style.display = 'none'; }
+            
+            if (kombi) sadzba *= 0.5;
+            
+            // Zaokrúhlenie nadol
+            const dan = zaokruhliNadol((sadzba / 12) * mesiace);
+            document.getElementById('calcDan').textContent = dan.toFixed(2) + ' €';
+            
+            return {zakladna, sadzba, dan, vek};
+        }
+
+        // === VOZIDLÁ ===
+        function onKatChange() {
+            const kat = document.getElementById('vKategoria').value;
+            document.getElementById('objemGroup').style.display = (kat==='M1'||kat==='L') ? 'flex' : 'none';
+            document.getElementById('hmotnostGroup').style.display = (kat.startsWith('N')) ? 'flex' : 'none';
+        }
+
+        function openModal(index = -1) {
+            editIndex = index;
+            const rok = document.getElementById('rok').value;
+            document.getElementById('modalTitle').textContent = index >= 0 ? 'Upraviť vozidlo' : 'Nové vozidlo';
+            
+            if (index >= 0) {
+                const v = vozidla[index];
+                document.getElementById('vEvc').value = v.evc || '';
+                document.getElementById('vKategoria').value = v.kategoria || 'M1';
+                document.getElementById('vDatum').value = v.datum || '';
+                document.getElementById('vDatumVzniku').value = v.datumVzniku || `1.1.${rok}`;
+                document.getElementById('vObjem').value = v.objem || '';
+                document.getElementById('vHmotnost').value = v.hmotnost || '';
+                document.getElementById('vNapravy').value = v.napravy || '2';
+                document.getElementById('vMesiace').value = v.mesiace || 12;
+                document.getElementById('vHybrid').checked = v.hybrid || false;
+                document.getElementById('vPlyn').checked = v.plyn || false;
+                document.getElementById('vKombi').checked = v.kombi || false;
+                // r.11
+                const r11 = v.r11 || 'a';
+                document.querySelector(`input[name="vR11"][value="${r11}"]`).checked = true;
+            } else {
+                document.getElementById('vEvc').value = '';
+                document.getElementById('vKategoria').value = 'M1';
+                document.getElementById('vDatum').value = '';
+                document.getElementById('vDatumVzniku').value = `1.1.${rok}`;
+                document.getElementById('vObjem').value = '';
+                document.getElementById('vHmotnost').value = '';
+                document.getElementById('vNapravy').value = '2';
+                document.getElementById('vMesiace').value = 12;
+                document.getElementById('vHybrid').checked = false;
+                document.getElementById('vPlyn').checked = false;
+                document.getElementById('vKombi').checked = false;
+                document.getElementById('vR11a').checked = true;
+            }
+            
+            onKatChange();
+            prepocitat();
+            document.getElementById('vozidloModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('vozidloModal').classList.remove('active');
+            editIndex = -1;
+        }
+
+        function ulozitVozidlo() {
+            const evc = document.getElementById('vEvc').value.toUpperCase().replace(/\s/g, '');
+            if (!evc) { alert('Zadajte EČV'); return; }
+            
+            const vypocet = prepocitat();
+            const r11 = document.querySelector('input[name="vR11"]:checked').value;
+            
+            const vozidlo = {
+                evc, 
+                kategoria: document.getElementById('vKategoria').value,
+                datum: document.getElementById('vDatum').value,
+                datumVzniku: document.getElementById('vDatumVzniku').value,
+                objem: parseFloat(document.getElementById('vObjem').value) || 0,
+                hmotnost: parseFloat(document.getElementById('vHmotnost').value) || 0,
+                napravy: document.getElementById('vNapravy').value,
+                mesiace: parseInt(document.getElementById('vMesiace').value) || 12,
+                hybrid: document.getElementById('vHybrid').checked,
+                plyn: document.getElementById('vPlyn').checked,
+                kombi: document.getElementById('vKombi').checked,
+                r11: r11,
+                zakladnaSadzba: vypocet.zakladna, 
+                sadzba: vypocet.sadzba,
+                dan: vypocet.dan, 
+                vek: vypocet.vek
+            };
+            
+            if (editIndex >= 0) { vozidla[editIndex] = vozidlo; log(`Vozidlo ${evc} upravené`); }
+            else { vozidla.push(vozidlo); log(`Vozidlo ${evc} pridané`); }
+            
+            refreshTable();
+            closeModal();
+        }
+
+        function odstranVozidlo(index) {
+            if (confirm('Odstrániť vozidlo?')) {
+                log(`Vozidlo ${vozidla[index].evc} odstránené`);
+                vozidla.splice(index, 1);
+                refreshTable();
+            }
+        }
+
+        function prepocitatVsetky() {
+            vozidla.forEach(v => {
+                const zakladna = getZakladnaSadzba(v.kategoria, v.objem, v.hmotnost);
+                const vek = vypocitajVek(v.datum);
+                let sadzba = zakladna;
+                if (vek > 0 && !v.kategoria.startsWith('O')) sadzba = zakladna * getKoefVeku(vek);
+                if (v.hybrid || v.plyn) sadzba *= 0.5;
+                if (v.kombi) sadzba *= 0.5;
+                v.zakladnaSadzba = zakladna; 
+                v.sadzba = sadzba; 
+                v.vek = vek;
+                v.dan = zaokruhliNadol((sadzba / 12) * v.mesiace);
+            });
+            refreshTable();
+            log('Vozidlá prepočítané');
+        }
+
+        function refreshTable() {
+            const tbody = document.getElementById('vozidlaTable');
+            tbody.innerHTML = '';
+            let celkom = 0;
+            
+            vozidla.forEach((v, i) => {
+                let zaklad = v.kategoria==='M1'||v.kategoria==='L' ? v.objem+' cm³' : v.kategoria.startsWith('O') ? v.kategoria : v.hmotnost+' kg';
+                tbody.innerHTML += `<tr>
+                    <td><strong>${v.evc}</strong></td><td>${v.kategoria}</td><td>${zaklad}</td>
+                    <td>${v.vek||'-'}</td><td>${v.sadzba?v.sadzba.toFixed(2):'-'}</td><td>${v.mesiace}</td>
+                    <td>${v.r11||'a'}</td>
+                    <td><strong>${v.dan?v.dan.toFixed(2):'0.00'}</strong></td>
+                    <td><button class="btn-secondary btn-sm" onclick="openModal(${i})">✏️</button>
+                        <button class="btn-danger btn-sm" onclick="odstranVozidlo(${i})">🗑️</button></td></tr>`;
+                celkom += v.dan || 0;
+            });
+            
+            // Celková daň tiež zaokrúhlená nadol
+            document.getElementById('celkovaDan').innerHTML = `<strong>${zaokruhliNadol(celkom).toFixed(2)}</strong>`;
+            document.getElementById('pocetVozidiel').textContent = vozidla.length;
+        }
+
+        // === EXPORT XML ===
+        function exportXML() {
+            const dic = document.getElementById('dic').value;
+            if (!dic) { alert('Zadajte DIČ'); return; }
+            if (vozidla.length === 0) { alert('Pridajte aspoň jedno vozidlo'); return; }
+            
+            const rok = document.getElementById('rok').value;
+            const typOsoby = document.getElementById('typOsoby').value;
+            let celkovaDan = zaokruhliNadol(vozidla.reduce((sum, v) => sum + (v.dan||0), 0));
+            
+            // ObdobiePar9
+            const par9 = {
+                ods1: document.getElementById('par9ods1').checked ? 1 : 0,
+                ods3: document.getElementById('par9ods3').checked ? 1 : 0,
+                ods4: document.getElementById('par9ods4').checked ? 1 : 0,
+                ods5: document.getElementById('par9ods5').checked ? 1 : 0,
+                ods6: document.getElementById('par9ods6').checked ? 1 : 0,
+                ods7: document.getElementById('par9ods7').checked ? 1 : 0,
+            };
+            
+            let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<dokument>
+  <hlavicka>
+    <fo>${typOsoby==='FO'?1:0}</fo>
+    <po>${typOsoby==='PO'?1:0}</po>
+    <zahranicna>0</zahranicna>
+    <dic>${dic}</dic>
+    <datumNarodenia></datumNarodenia>
+    <typDP><rdp>1</rdp><odp>0</odp><ddp>0</ddp></typDP>
+    <zdanovacieObdobie><od>1.1.${rok}</od><do>31.12.${rok}</do><datumDDP></datumDDP></zdanovacieObdobie>
+    <ObdobiePar9>
+      <ods1>${par9.ods1}</ods1>
+      <ods3>${par9.ods3}</ods3>
+      <ods4>${par9.ods4}</ods4>
+      <ods5>${par9.ods5}</ods5>
+      <ods6>${par9.ods6}</ods6>
+      <ods7>${par9.ods7}</ods7>
+    </ObdobiePar9>
+    <foPriezvisko></foPriezvisko><foMeno></foMeno><foTitul></foTitul><foTitulZa></foTitulZa><foObchodneMeno></foObchodneMeno>
+    <poObchodneMeno><riadok>${document.getElementById('nazov').value}</riadok><riadok></riadok><riadok></riadok><riadok></riadok></poObchodneMeno>
+    <sidlo><ulica>${document.getElementById('ulica').value}</ulica><cislo>${document.getElementById('cislo').value}</cislo><psc>${document.getElementById('psc').value}</psc><obec>${document.getElementById('obec').value}</obec><stat>Slovenská republika</stat><telefon></telefon><emailFax></emailFax></sidlo>
+    <adresaOrganizacnejZlozky><ulica></ulica><cislo></cislo><psc></psc><obec></obec><telefon></telefon><emailFax></emailFax></adresaOrganizacnejZlozky>
+    <typZastupcu><typZastupca>0</typZastupca><dedic>0</dedic><spravcaVkonkurznomKonani>0</spravcaVkonkurznomKonani><likvidator>0</likvidator><statutarnyZastupcaPO>0</statutarnyZastupcaPO><pravnyNastupca>0</pravnyNastupca></typZastupcu>
+    <zastupca><priezvisko></priezvisko><meno></meno><titul></titul><titulZa></titulZa><rc></rc><datumNarodenia></datumNarodenia><dic></dic><obchodneMeno></obchodneMeno><adresa><ulica></ulica><cislo></cislo><psc></psc><obec></obec><stat>Slovenská republika</stat><telefon></telefon><emailFax></emailFax></adresa></zastupca>
+  </hlavicka>
+  <telo>
+    <r35>${vozidla.length}</r35>
+    <r36>${celkovaDan.toFixed(2)}</r36>
+    <r37></r37>
+    <r38>${celkovaDan.toFixed(2)}</r38>
+    <r39></r39>
+    <r40>${celkovaDan.toFixed(2)}</r40>
+    <r41></r41><r42></r42><r43></r43><r44></r44><r45></r45>
+    <vrateniePreplatku><vratit>0</vratit><sposobPlatby><poukazka>0</poukazka><ucet>0</ucet></sposobPlatby><IBAN></IBAN><datum></datum></vrateniePreplatku>
+    <poznamky></poznamky>
+    <datumVyhlasenia>${new Date().toLocaleDateString('sk-SK')}</datumVyhlasenia>`;
+            
+            const pocetStran = Math.ceil(vozidla.length / 2);
+            for (let s = 0; s < pocetStran; s++) {
+                xml += `\n    <strana3><oznacenie><aktualna>${s+1}</aktualna><celkovo>${pocetStran}</celkovo></oznacenie>`;
+                for (let col = 1; col <= 2; col++) {
+                    const v = vozidla[s*2+col-1] || {};
+                    const r11map = {a:1, b:0, c:0, d:0};
+                    const r11val = v.r11 || 'a';
+                    xml += `
+      <stlpec${col}>
+        <r01>${v.datum||''}</r01>
+        <r02vzniku>${v.datumVzniku||''}</r02vzniku>
+        <r02zaniku></r02zaniku>
+        <r03Kategoria>${v.kategoria||''}</r03Kategoria>
+        <r04KodDruhuBA-BB>0</r04KodDruhuBA-BB>
+        <r04KodDruhuBC-BD>0</r04KodDruhuBC-BD>
+        <r05VzduchovePruzenie>0</r05VzduchovePruzenie>
+        <r05IneSystemy>0</r05IneSystemy>
+        <r06-EVC>${v.evc||''}</r06-EVC>
+        <r07-ObjemValcov>${v.objem||''}</r07-ObjemValcov>
+        <r08-VykonMotora></r08-VykonMotora>
+        <r09Hmotnost>${v.hmotnost||''}</r09Hmotnost>
+        <r10PocetNaprav>${v.napravy||''}</r10PocetNaprav>
+        <r11pismA>${r11val==='a'?1:0}</r11pismA>
+        <r11pismB>${r11val==='b'?1:0}</r11pismB>
+        <r11pismC>${r11val==='c'?1:0}</r11pismC>
+        <r11pismD>${r11val==='d'?1:0}</r11pismD>
+        <r12pism></r12pism>
+        <r12oslobodene>0</r12oslobodene>
+        <r13sadzba>${v.zakladnaSadzba||''}</r13sadzba>
+        <r14zvysenieSadzby1_10>0</r14zvysenieSadzby1_10>
+        <r14zvysenieSadzby1_20>0</r14zvysenieSadzby1_20>
+        <r14zvysenieSadzby1_30>0</r14zvysenieSadzby1_30>
+        <r14zvysenieSadzby1_40>0</r14zvysenieSadzby1_40>
+        <r14zvysenieSadzby1_50>0</r14zvysenieSadzby1_50>
+        <r14zvysenieSadzby2_10>0</r14zvysenieSadzby2_10>
+        <r14zvysenieSadzby2_20>0</r14zvysenieSadzby2_20>
+        <r14zvysenieSadzby2_30>0</r14zvysenieSadzby2_30>
+        <r14zvysenieSadzby2_40>0</r14zvysenieSadzby2_40>
+        <r14zvysenieSadzby2_50>0</r14zvysenieSadzby2_50>
+        <r15rocnaSadzba_1>${v.sadzba?v.sadzba.toFixed(2):''}</r15rocnaSadzba_1>
+        <r15rocnaSadzba_2></r15rocnaSadzba_2>
+        <r16hybrid>${v.hybrid?1:0}</r16hybrid>
+        <r16plyn>${v.plyn?1:0}</r16plyn>
+        <r16vodik>0</r16vodik>
+        <r17sadzba1></r17sadzba1>
+        <r17sadzba2></r17sadzba2>
+        <r18KombiDoprava>${v.kombi?1:0}</r18KombiDoprava>
+        <r19sadzba1></r19sadzba1>
+        <r19sadzba2></r19sadzba2>
+        <r20aPocMesS1>${v.mesiace||''}</r20aPocMesS1>
+        <r20aPocMesS2></r20aPocMesS2>
+        <r20bPocDniS1></r20bPocDniS1>
+        <r20bPocDniS2></r20bPocDniS2>
+        <r21dan1>${v.dan?v.dan.toFixed(2):''}</r21dan1>
+        <r21dan2></r21dan2>
+        <r22>${v.dan?v.dan.toFixed(2):''}</r22>
+        <r23></r23>
+        <r24></r24>
+        <r25></r25>
+      </stlpec${col}>`;
+                }
+                xml += '\n    </strana3>';
+            }
+            xml += '\n  </telo>\n</dokument>';
+            
+            const blob = new Blob([xml], {type: 'application/xml'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `dmv_${dic}_${rok}.xml`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            log(`XML exportované: dmv_${dic}_${rok}.xml`);
+        }
+
+        // Init
+        log('DMV Processor v2.0 pripravený');
+        log('Server: python dmv_server.py (port 5100)');
+        document.getElementById('par9ods1').checked = true;
+        document.getElementById('r11a').checked = true;
+    </script>
+</body>
+</html>
