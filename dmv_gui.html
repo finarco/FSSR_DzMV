@@ -64,6 +64,37 @@
         .btn-group { display: flex; gap: 5px; }
         .section-title { font-weight: 600; color: var(--primary); margin: 15px 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
         .hint { font-size: 0.8em; color: var(--text-sec); margin-top: 2px; }
+
+        /* Validation styles */
+        .input-valid { border-color: var(--success) !important; background: #f1f8f4; }
+        .input-invalid { border-color: var(--error) !important; background: #fff5f5; }
+        .error-msg {
+            color: var(--error);
+            font-size: 0.8em;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            animation: fadeIn 0.2s ease-in;
+        }
+        .success-msg {
+            color: var(--success);
+            font-size: 0.8em;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            animation: fadeIn 0.2s ease-in;
+        }
+        .validation-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .form-group.has-validation { position: relative; }
     </style>
 </head>
 <body>
@@ -410,6 +441,124 @@
             const time = new Date().toLocaleTimeString('sk-SK', {hour:'2-digit', minute:'2-digit'});
             box.innerHTML += `<div class="log-entry"><span class="time">[${time}]</span> ${msg}</div>`;
             box.scrollTop = box.scrollHeight;
+        }
+
+        // === VALIDÁCIA ===
+
+        // Validácia DIČ (Daňové identifikačné číslo)
+        function validateDIC(dic) {
+            const cleaned = dic.replace(/\s/g, '');
+
+            // SK DIČ: 10 číslic
+            if (!cleaned) {
+                return { valid: null, message: '' };
+            }
+
+            if (!/^\d{10}$/.test(cleaned)) {
+                return { valid: false, message: 'DIČ musí obsahovať presne 10 číslic' };
+            }
+
+            // Prvé 2 číslice: 20-54 (kódy daňových úradov SR)
+            const prefix = parseInt(cleaned.substring(0, 2));
+            if (prefix < 20 || prefix > 54) {
+                return { valid: false, message: 'Neplatný kód daňového úradu (20-54)' };
+            }
+
+            return { valid: true, message: 'DIČ je platné ✓' };
+        }
+
+        // Validácia IČO (Identifikačné číslo organizácie)
+        function validateICO(ico) {
+            const cleaned = ico.replace(/\s/g, '');
+
+            // IČO: 8 číslic
+            if (!cleaned) {
+                return { valid: null, message: '' };
+            }
+
+            if (!/^\d{8}$/.test(cleaned)) {
+                return { valid: false, message: 'IČO musí obsahovať presne 8 číslic' };
+            }
+
+            // Kontrolný súčet podľa slovenského algoritmu
+            // https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/registre/registre-platitelov-dph
+            const digits = cleaned.split('').map(Number);
+            let sum = 0;
+
+            for (let i = 0; i < 7; i++) {
+                sum += digits[i] * (8 - i);
+            }
+
+            const checkDigit = (11 - (sum % 11)) % 10;
+
+            if (checkDigit !== digits[7]) {
+                return { valid: false, message: 'Neplatné IČO (kontrolný súčet nesedí)' };
+            }
+
+            return { valid: true, message: 'IČO je platné ✓' };
+        }
+
+        // Aplikovanie validácie na input pole
+        function applyValidation(inputElement, validationResult) {
+            const formGroup = inputElement.parentElement;
+
+            // Odstráň predchádzajúce validačné správy
+            const existingMsg = formGroup.querySelector('.error-msg, .success-msg');
+            if (existingMsg) {
+                existingMsg.remove();
+            }
+
+            // Odstráň validačné triedy
+            inputElement.classList.remove('input-valid', 'input-invalid');
+
+            if (validationResult.valid === null) {
+                // Prázdne pole - žiadna validácia
+                return;
+            }
+
+            if (validationResult.valid) {
+                // Platné
+                inputElement.classList.add('input-valid');
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'success-msg';
+                msgDiv.innerHTML = `<span class="validation-icon">✓</span> ${validationResult.message}`;
+                formGroup.appendChild(msgDiv);
+            } else {
+                // Neplatné
+                inputElement.classList.add('input-invalid');
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'error-msg';
+                msgDiv.innerHTML = `<span class="validation-icon">✗</span> ${validationResult.message}`;
+                formGroup.appendChild(msgDiv);
+            }
+        }
+
+        // Event listenery pre real-time validáciu
+        function initValidation() {
+            const dicInput = document.getElementById('dic');
+            const icoInput = document.getElementById('ico');
+
+            // DIČ validácia
+            dicInput.addEventListener('input', function() {
+                const result = validateDIC(this.value);
+                applyValidation(this, result);
+            });
+
+            dicInput.addEventListener('blur', function() {
+                const result = validateDIC(this.value);
+                applyValidation(this, result);
+            });
+
+            // IČO validácia
+            icoInput.addEventListener('input', function() {
+                const result = validateICO(this.value);
+                applyValidation(this, result);
+            });
+
+            icoInput.addEventListener('blur', function() {
+                const result = validateICO(this.value);
+                applyValidation(this, result);
+            });
         }
 
         // === OVERENIE SPOLOČNOSTI ===
@@ -1232,6 +1381,7 @@
         log('Server: python dmv_server.py (port 5100)');
         document.getElementById('par9ods1').checked = true;
         document.getElementById('r11a').checked = true;
+        initValidation(); // Inicializácia real-time validácie
     </script>
 </body>
 </html>
