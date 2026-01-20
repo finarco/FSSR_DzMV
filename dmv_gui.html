@@ -95,6 +95,54 @@
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         .form-group.has-validation { position: relative; }
+
+        /* History card styles */
+        .history-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .history-card:hover {
+            background: var(--bg-accent);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+        .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .history-card-title {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1.05em;
+        }
+        .history-card-date {
+            color: var(--text-sec);
+            font-size: 0.85em;
+        }
+        .history-card-details {
+            color: var(--text-sec);
+            font-size: 0.9em;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .history-card-detail {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -113,8 +161,9 @@
                 </select>
             </div>
             <div class="btn-group">
+                <button class="btn-secondary" onclick="showHistoryModal()">📋 História</button>
                 <button class="btn-primary" onclick="document.getElementById('pdfInput').click()">📂 Načítať PDF</button>
-                <button class="btn-success" onclick="exportXML()">📤 Exportovať XML</button>
+                <button class="btn-success" id="btnExportXML" onclick="exportXML()">📤 Exportovať XML</button>
             </div>
             <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(this)">
         </div>
@@ -418,6 +467,26 @@
         </div>
     </div>
 
+    <!-- Modal pre históriu -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>📋 História spracovaných firiem</h3>
+                <button class="close-btn" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="section-title">Vyberte firmu na načítanie</div>
+                <div id="historyList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Dynamicky generovaný zoznam -->
+                </div>
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border); text-align: center; color: var(--text-sec); font-size: 0.85em;">
+                    <span id="historyCount">0 záznamov v histórii</span>
+                    <button class="btn-sm" onclick="clearHistory()" style="margin-left: 15px; background: var(--error); color: #fff;">🗑️ Vymazať históriu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = 'http://localhost:5100/api';
         let vozidla = [];
@@ -559,6 +628,293 @@
                 const result = validateICO(this.value);
                 applyValidation(this, result);
             });
+        }
+
+        // === DISABLED STATE & FORM VALIDATION ===
+
+        // Kontrola, či je formulár pripravený na export
+        function isFormValid() {
+            const dic = document.getElementById('dic').value.trim();
+            const nazov = document.getElementById('nazov').value.trim();
+            const dicValid = validateDIC(dic).valid === true;
+            const hasVehicles = vozidla.length > 0;
+
+            return dicValid && nazov && hasVehicles;
+        }
+
+        // Aktualizácia disabled stavu pre tlačidlá
+        function updateButtonStates() {
+            const exportBtn = document.getElementById('btnExportXML');
+            const isValid = isFormValid();
+
+            if (isValid) {
+                exportBtn.classList.remove('btn-disabled');
+                exportBtn.title = 'Exportovať XML pre finančnú správu';
+            } else {
+                exportBtn.classList.add('btn-disabled');
+                const reasons = [];
+                if (!validateDIC(document.getElementById('dic').value).valid) reasons.push('Neplatné DIČ');
+                if (!document.getElementById('nazov').value.trim()) reasons.push('Chýba názov');
+                if (vozidla.length === 0) reasons.push('Žiadne vozidlá');
+                exportBtn.title = `Nemožno exportovať: ${reasons.join(', ')}`;
+            }
+        }
+
+        // === AUTO-SAVE & LOCAL STORAGE ===
+
+        let autoSaveTimer;
+
+        // Uložiť aktuálny stav formulára
+        function saveCurrentState() {
+            const state = {
+                timestamp: new Date().toISOString(),
+                rok: document.getElementById('rok').value,
+                typOsoby: document.getElementById('typOsoby').value,
+                dic: document.getElementById('dic').value,
+                ico: document.getElementById('ico').value,
+                nazov: document.getElementById('nazov').value,
+                ulica: document.getElementById('ulica').value,
+                cislo: document.getElementById('cislo').value,
+                psc: document.getElementById('psc').value,
+                obec: document.getElementById('obec').value,
+                r11a: document.getElementById('r11a').checked,
+                r11b: document.getElementById('r11b').checked,
+                r11c: document.getElementById('r11c').checked,
+                r11d: document.getElementById('r11d').checked,
+                r11e: document.getElementById('r11e').checked,
+                par9ods1: document.getElementById('par9ods1').checked,
+                par9ods3: document.getElementById('par9ods3').checked,
+                par9ods4: document.getElementById('par9ods4').checked,
+                par9ods5: document.getElementById('par9ods5').checked,
+                par9ods6: document.getElementById('par9ods6').checked,
+                par9ods7: document.getElementById('par9ods7').checked,
+                vozidla: vozidla
+            };
+
+            localStorage.setItem('dmv_autosave', JSON.stringify(state));
+            log('💾 Automatické uloženie');
+        }
+
+        // Obnoviť stav z localStorage
+        function restoreState() {
+            const saved = localStorage.getItem('dmv_autosave');
+            if (!saved) return false;
+
+            try {
+                const state = JSON.parse(saved);
+
+                // Potvrdenie od užívateľa
+                const time = new Date(state.timestamp).toLocaleString('sk-SK');
+                if (!confirm(`Našli sa neuložené údaje z ${time}.\n\nObnoviť rozpracovaný formulár?`)) {
+                    return false;
+                }
+
+                // Obnoviť formulár
+                document.getElementById('rok').value = state.rok || '2024';
+                document.getElementById('typOsoby').value = state.typOsoby || 'PO';
+                document.getElementById('dic').value = state.dic || '';
+                document.getElementById('ico').value = state.ico || '';
+                document.getElementById('nazov').value = state.nazov || '';
+                document.getElementById('ulica').value = state.ulica || '';
+                document.getElementById('cislo').value = state.cislo || '';
+                document.getElementById('psc').value = state.psc || '';
+                document.getElementById('obec').value = state.obec || '';
+
+                document.getElementById('r11a').checked = state.r11a || false;
+                document.getElementById('r11b').checked = state.r11b || false;
+                document.getElementById('r11c').checked = state.r11c || false;
+                document.getElementById('r11d').checked = state.r11d || false;
+                document.getElementById('r11e').checked = state.r11e || false;
+
+                document.getElementById('par9ods1').checked = state.par9ods1 || false;
+                document.getElementById('par9ods3').checked = state.par9ods3 || false;
+                document.getElementById('par9ods4').checked = state.par9ods4 || false;
+                document.getElementById('par9ods5').checked = state.par9ods5 || false;
+                document.getElementById('par9ods6').checked = state.par9ods6 || false;
+                document.getElementById('par9ods7').checked = state.par9ods7 || false;
+
+                vozidla = state.vozidla || [];
+                updateVozidlaTable();
+
+                log(`✅ Obnovené údaje z ${time}`);
+                return true;
+            } catch (e) {
+                console.error('Chyba pri obnovení stavu:', e);
+                return false;
+            }
+        }
+
+        // Štart auto-save časovača
+        function startAutoSave() {
+            // Auto-save každých 30 sekúnd
+            autoSaveTimer = setInterval(() => {
+                const dic = document.getElementById('dic').value.trim();
+                const nazov = document.getElementById('nazov').value.trim();
+
+                // Uložiť len ak má zmysel (aspoň DIČ alebo názov)
+                if (dic || nazov || vozidla.length > 0) {
+                    saveCurrentState();
+                }
+            }, 30000);
+        }
+
+        // === HISTÓRIA FIRIEM ===
+
+        // Uložiť firmu do histórie
+        function saveToHistory() {
+            const dic = document.getElementById('dic').value.trim();
+            const ico = document.getElementById('ico').value.trim();
+            const nazov = document.getElementById('nazov').value.trim();
+
+            if (!dic || !nazov) return;
+
+            let history = JSON.parse(localStorage.getItem('dmv_history') || '[]');
+
+            // Odstrániť existujúci záznam s rovnakým DIČ
+            history = history.filter(h => h.dic !== dic);
+
+            // Pridať nový záznam na začiatok
+            const record = {
+                timestamp: new Date().toISOString(),
+                dic: dic,
+                ico: ico,
+                nazov: nazov,
+                pocetVozidiel: vozidla.length,
+                celkovaDan: zaokruhliNadol(vozidla.reduce((sum, v) => sum + (v.dan||0), 0)),
+                state: {
+                    rok: document.getElementById('rok').value,
+                    typOsoby: document.getElementById('typOsoby').value,
+                    dic: dic,
+                    ico: ico,
+                    nazov: nazov,
+                    ulica: document.getElementById('ulica').value,
+                    cislo: document.getElementById('cislo').value,
+                    psc: document.getElementById('psc').value,
+                    obec: document.getElementById('obec').value,
+                    r11a: document.getElementById('r11a').checked,
+                    r11b: document.getElementById('r11b').checked,
+                    r11c: document.getElementById('r11c').checked,
+                    r11d: document.getElementById('r11d').checked,
+                    r11e: document.getElementById('r11e').checked,
+                    par9ods1: document.getElementById('par9ods1').checked,
+                    par9ods3: document.getElementById('par9ods3').checked,
+                    par9ods4: document.getElementById('par9ods4').checked,
+                    par9ods5: document.getElementById('par9ods5').checked,
+                    par9ods6: document.getElementById('par9ods6').checked,
+                    par9ods7: document.getElementById('par9ods7').checked,
+                    vozidla: vozidla
+                }
+            };
+
+            history.unshift(record);
+
+            // Ponechať max 50 záznamov
+            history = history.slice(0, 50);
+
+            localStorage.setItem('dmv_history', JSON.stringify(history));
+            log(`📋 Firma uložená do histórie: ${nazov}`);
+        }
+
+        // Zobraziť modal s históriou
+        function showHistoryModal() {
+            const history = JSON.parse(localStorage.getItem('dmv_history') || '[]');
+            const historyList = document.getElementById('historyList');
+            const historyCount = document.getElementById('historyCount');
+
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-sec);">📭 Žiadne záznamy v histórii</div>';
+                historyCount.textContent = '0 záznamov v histórii';
+            } else {
+                historyList.innerHTML = history.map((record, index) => {
+                    const date = new Date(record.timestamp).toLocaleString('sk-SK', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="history-card" onclick="loadFromHistory(${index})">
+                            <div class="history-card-header">
+                                <div class="history-card-title">🏢 ${record.nazov}</div>
+                                <div class="history-card-date">📅 ${date}</div>
+                            </div>
+                            <div class="history-card-details">
+                                <div class="history-card-detail">📝 DIČ: ${record.dic}</div>
+                                ${record.ico ? `<div class="history-card-detail">🏷️ IČO: ${record.ico}</div>` : ''}
+                                <div class="history-card-detail">🚙 Vozidiel: ${record.pocetVozidiel}</div>
+                                <div class="history-card-detail">💰 Daň: ${record.celkovaDan.toFixed(2)} €</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                historyCount.textContent = `${history.length} ${history.length === 1 ? 'záznam' : history.length < 5 ? 'záznamy' : 'záznamov'} v histórii`;
+            }
+
+            document.getElementById('historyModal').style.display = 'flex';
+        }
+
+        // Zatvoriť modal histórie
+        function closeHistoryModal() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        // Načítať firmu z histórie
+        function loadFromHistory(index) {
+            const history = JSON.parse(localStorage.getItem('dmv_history') || '[]');
+            if (index < 0 || index >= history.length) return;
+
+            const record = history[index];
+            const state = record.state;
+
+            // Potvrdenie
+            if (!confirm(`Načítať údaje pre:\n${record.nazov}\n\nAktuálne údaje budú prepísané!`)) {
+                return;
+            }
+
+            // Načítať stav
+            document.getElementById('rok').value = state.rok || '2024';
+            document.getElementById('typOsoby').value = state.typOsoby || 'PO';
+            document.getElementById('dic').value = state.dic || '';
+            document.getElementById('ico').value = state.ico || '';
+            document.getElementById('nazov').value = state.nazov || '';
+            document.getElementById('ulica').value = state.ulica || '';
+            document.getElementById('cislo').value = state.cislo || '';
+            document.getElementById('psc').value = state.psc || '';
+            document.getElementById('obec').value = state.obec || '';
+
+            document.getElementById('r11a').checked = state.r11a || false;
+            document.getElementById('r11b').checked = state.r11b || false;
+            document.getElementById('r11c').checked = state.r11c || false;
+            document.getElementById('r11d').checked = state.r11d || false;
+            document.getElementById('r11e').checked = state.r11e || false;
+
+            document.getElementById('par9ods1').checked = state.par9ods1 || false;
+            document.getElementById('par9ods3').checked = state.par9ods3 || false;
+            document.getElementById('par9ods4').checked = state.par9ods4 || false;
+            document.getElementById('par9ods5').checked = state.par9ods5 || false;
+            document.getElementById('par9ods6').checked = state.par9ods6 || false;
+            document.getElementById('par9ods7').checked = state.par9ods7 || false;
+
+            vozidla = state.vozidla || [];
+            updateVozidlaTable();
+            updateButtonStates();
+
+            closeHistoryModal();
+            log(`✅ Načítané údaje: ${record.nazov}`);
+        }
+
+        // Vymazať celú históriu
+        function clearHistory() {
+            if (!confirm('Naozaj vymazať celú históriu?\n\nTáto akcia sa nedá vrátiť späť!')) {
+                return;
+            }
+
+            localStorage.removeItem('dmv_history');
+            showHistoryModal(); // Refresh modal
+            log('🗑️ História vymazaná');
         }
 
         // === OVERENIE SPOLOČNOSTI ===
@@ -1242,6 +1598,7 @@
             // Celková daň tiež zaokrúhlená nadol
             document.getElementById('celkovaDan').innerHTML = `<strong>${zaokruhliNadol(celkom).toFixed(2)}</strong>`;
             document.getElementById('pocetVozidiel').textContent = vozidla.length;
+            updateButtonStates(); // Aktualizovať disabled state
         }
 
         // === EXPORT XML ===
@@ -1374,6 +1731,9 @@
             a.click();
             URL.revokeObjectURL(a.href);
             log(`XML exportované: dmv_${dic}_${rok}.xml`);
+
+            // Uložiť do histórie po úspešnom exporte
+            saveToHistory();
         }
 
         // Init
@@ -1381,7 +1741,22 @@
         log('Server: python dmv_server.py (port 5100)');
         document.getElementById('par9ods1').checked = true;
         document.getElementById('r11a').checked = true;
-        initValidation(); // Inicializácia real-time validácie
+
+        // Inicializácia validácie
+        initValidation();
+
+        // Obnoviť stav z localStorage
+        restoreState();
+
+        // Spustiť auto-save
+        startAutoSave();
+
+        // Event listenery pre updateButtonStates()
+        document.getElementById('dic').addEventListener('input', updateButtonStates);
+        document.getElementById('nazov').addEventListener('input', updateButtonStates);
+
+        // Inicializovať button state
+        updateButtonStates();
     </script>
 </body>
 </html>
