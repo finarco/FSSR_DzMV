@@ -1630,7 +1630,7 @@
     <dic>${dic}</dic>
     <datumNarodenia></datumNarodenia>
     <typDP><rdp>1</rdp><odp>0</odp><ddp>0</ddp></typDP>
-    <zdanovacieObdobie><od>1.1.${rok}</od><do>31.12.${rok}</do><datumDDP></datumDDP></zdanovacieObdobie>
+    <zdanovacieObdobie><od>01.01.${rok}</od><do>31.12.${rok}</do><datumDDP></datumDDP></zdanovacieObdobie>
     <ObdobiePar9>
       <ods1>${par9.ods1}</ods1>
       <ods3>${par9.ods3}</ods3>
@@ -1649,11 +1649,11 @@
   <telo>
     <r35>${vozidla.length}</r35>
     <r36>${celkovaDan.toFixed(2)}</r36>
-    <r37></r37>
+    <r37>0.00</r37>
     <r38>${celkovaDan.toFixed(2)}</r38>
     <r39></r39>
-    <r40>${celkovaDan.toFixed(2)}</r40>
-    <r41></r41><r42></r42><r43></r43><r44></r44><r45></r45>
+    <r40>${vozidla.reduce((sum, v) => sum + (v.zakladnaSadzba||0), 0).toFixed(2)}</r40>
+    <r41>${vozidla.length}</r41><r42></r42><r43></r43><r44></r44><r45></r45>
     <vrateniePreplatku><vratit>0</vratit><sposobPlatby><poukazka>0</poukazka><ucet>0</ucet></sposobPlatby><IBAN></IBAN><datum></datum></vrateniePreplatku>
     <poznamky></poznamky>
     <datumVyhlasenia>${new Date().toLocaleDateString('sk-SK').replace(/ /g, '')}</datumVyhlasenia>`;
@@ -1693,15 +1693,15 @@
         <r14zvysenieSadzby2_30>0</r14zvysenieSadzby2_30>
         <r14zvysenieSadzby2_40>0</r14zvysenieSadzby2_40>
         <r14zvysenieSadzby2_50>0</r14zvysenieSadzby2_50>
-        <r15rocnaSadzba_1>${v.sadzba?v.sadzba.toFixed(2):''}</r15rocnaSadzba_1>
+        <r15rocnaSadzba_1>${v.zakladnaSadzba||''}</r15rocnaSadzba_1>
         <r15rocnaSadzba_2></r15rocnaSadzba_2>
         <r16hybrid>${v.hybrid?1:0}</r16hybrid>
         <r16plyn>${v.plyn?1:0}</r16plyn>
         <r16vodik>0</r16vodik>
-        <r17sadzba1></r17sadzba1>
+        <r17sadzba1>${(v.hybrid||v.plyn)?v.sadzba.toFixed(2):''}</r17sadzba1>
         <r17sadzba2></r17sadzba2>
         <r18KombiDoprava>${v.kombi?1:0}</r18KombiDoprava>
-        <r19sadzba1></r19sadzba1>
+        <r19sadzba1>${v.sadzba?v.sadzba.toFixed(2):''}</r19sadzba1>
         <r19sadzba2></r19sadzba2>
         <r20aPocMesS1>${v.mesiace||''}</r20aPocMesS1>
         <r20aPocMesS2></r20aPocMesS2>
