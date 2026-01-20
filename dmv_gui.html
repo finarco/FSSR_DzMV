@@ -734,7 +734,7 @@
                 document.getElementById('par9ods7').checked = state.par9ods7 || false;
 
                 vozidla = state.vozidla || [];
-                updateVozidlaTable();
+                refreshTable();
 
                 log(`✅ Obnovené údaje z ${time}`);
                 return true;
@@ -899,7 +899,7 @@
             document.getElementById('par9ods7').checked = state.par9ods7 || false;
 
             vozidla = state.vozidla || [];
-            updateVozidlaTable();
+            refreshTable();
             updateButtonStates();
 
             closeHistoryModal();
@@ -1656,14 +1656,13 @@
     <r41></r41><r42></r42><r43></r43><r44></r44><r45></r45>
     <vrateniePreplatku><vratit>0</vratit><sposobPlatby><poukazka>0</poukazka><ucet>0</ucet></sposobPlatby><IBAN></IBAN><datum></datum></vrateniePreplatku>
     <poznamky></poznamky>
-    <datumVyhlasenia>${new Date().toLocaleDateString('sk-SK')}</datumVyhlasenia>`;
+    <datumVyhlasenia>${new Date().toLocaleDateString('sk-SK').replace(/ /g, '')}</datumVyhlasenia>`;
             
             const pocetStran = Math.ceil(vozidla.length / 2);
             for (let s = 0; s < pocetStran; s++) {
                 xml += `\n    <strana3><oznacenie><aktualna>${s+1}</aktualna><celkovo>${pocetStran}</celkovo></oznacenie>`;
                 for (let col = 1; col <= 2; col++) {
                     const v = vozidla[s*2+col-1] || {};
-                    const r11map = {a:1, b:0, c:0, d:0};
                     const r11val = v.r11 || 'a';
                     xml += `
       <stlpec${col}>
@@ -1680,11 +1679,7 @@
         <r08-VykonMotora></r08-VykonMotora>
         <r09Hmotnost>${v.hmotnost||''}</r09Hmotnost>
         <r10PocetNaprav>${v.napravy||''}</r10PocetNaprav>
-        <r11pismA>${r11val==='a'?1:0}</r11pismA>
-        <r11pismB>${r11val==='b'?1:0}</r11pismB>
-        <r11pismC>${r11val==='c'?1:0}</r11pismC>
-        <r11pismD>${r11val==='d'?1:0}</r11pismD>
-        <r11pismE>${r11val==='e'?1:0}</r11pismE>
+        <r11pism>${r11val}</r11pism>
         <r12pism></r12pism>
         <r12oslobodene>0</r12oslobodene>
         <r13sadzba>${v.zakladnaSadzba||''}</r13sadzba>
