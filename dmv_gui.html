@@ -734,7 +734,7 @@
                 document.getElementById('par9ods7').checked = state.par9ods7 || false;
 
                 vozidla = state.vozidla || [];
-                updateVozidlaTable();
+                refreshTable();
 
                 log(`✅ Obnovené údaje z ${time}`);
                 return true;
@@ -899,7 +899,7 @@
             document.getElementById('par9ods7').checked = state.par9ods7 || false;
 
             vozidla = state.vozidla || [];
-            updateVozidlaTable();
+            refreshTable();
             updateButtonStates();
 
             closeHistoryModal();
