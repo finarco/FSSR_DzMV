@@ -137,6 +137,7 @@
                     <label><input type="checkbox" id="r11b"> b) užívateľ pri prenájme</label>
                     <label><input type="checkbox" id="r11c"> c) užívateľ pri zamestnávateľovi</label>
                     <label><input type="checkbox" id="r11d"> d) stála prevádzkareň / org. zložka</label>
+                    <label><input type="checkbox" id="r11e"> e) zamestnávateľ vypláca cestovné náhrady</label>
                 </div>
             </div>
         </div>
@@ -362,6 +363,7 @@
                     <label><input type="radio" name="vR11" id="vR11b" value="b"> b) prenájom</label>
                     <label><input type="radio" name="vR11" id="vR11c" value="c"> c) zamestnanec</label>
                     <label><input type="radio" name="vR11" id="vR11d" value="d"> d) org. zložka</label>
+                    <label><input type="radio" name="vR11" id="vR11e" value="e"> e) zamestnávateľ (cestovné náhrady)</label>
                 </div>
                 
                 <div class="section-title">Pohon / Zníženia</div>
@@ -1176,6 +1178,7 @@
         <r11pismB>${r11val==='b'?1:0}</r11pismB>
         <r11pismC>${r11val==='c'?1:0}</r11pismC>
         <r11pismD>${r11val==='d'?1:0}</r11pismD>
+        <r11pismE>${r11val==='e'?1:0}</r11pismE>
         <r12pism></r12pism>
         <r12oslobodene>0</r12oslobodene>
         <r13sadzba>${v.zakladnaSadzba||''}</r13sadzba>
