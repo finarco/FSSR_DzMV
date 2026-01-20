@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST - Možnosť e) daňovník</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #4CAF50; }
+        h2 { color: #333; margin-top: 0; }
+        label {
+            display: block;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        label:hover { background: #e8f5e9; }
+        input[type="checkbox"], input[type="radio"] { margin-right: 10px; }
+        .highlight { background: yellow; font-weight: bold; }
+        .success { color: green; font-size: 1.2em; margin: 20px 0; }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>✅ TEST SÚBOR - Možnosť e) pre daňovníka podľa § 3</h1>
+
+    <div class="instructions">
+        <strong>📌 Tento súbor testuje, či sa zobrazuje možnosť e).</strong><br>
+        Ak TU vidíte možnosť e), ale v dmv_gui.html NIE, problém je v cache prehliadača!
+    </div>
+
+    <div class="card">
+        <h2>1️⃣ Spoločnostná sekcia (checkboxy):</h2>
+        <label><input type="checkbox"> a) držiteľ zapísaný v doklade</label>
+        <label><input type="checkbox"> b) užívateľ pri prenájme</label>
+        <label><input type="checkbox"> c) užívateľ pri zamestnávateľovi</label>
+        <label><input type="checkbox"> d) stála prevádzkareň / org. zložka</label>
+        <label class="highlight"><input type="checkbox"> e) zamestnávateľ vypláca cestovné náhrady</label>
+    </div>
+
+    <div class="card">
+        <h2>2️⃣ Sekcia pre vozidlo (radio buttony):</h2>
+        <label><input type="radio" name="test" checked> a) držiteľ</label>
+        <label><input type="radio" name="test"> b) prenájom</label>
+        <label><input type="radio" name="test"> c) zamestnanec</label>
+        <label><input type="radio" name="test"> d) org. zložka</label>
+        <label class="highlight"><input type="radio" name="test"> e) zamestnávateľ (cestovné náhrady)</label>
+    </div>
+
+    <div class="success">
+        ✅ Ak vidíte ŽLTÚ možnosť "e)" vyššie, kód je správny!
+    </div>
+
+    <div class="card">
+        <h2>🔧 Ak v dmv_gui.html možnosť e) NEVIDÍTE:</h2>
+        <ol style="line-height: 2;">
+            <li><strong>TVRDÉ OBNOVENIE:</strong> Ctrl+F5 (Win/Linux) alebo Cmd+Shift+R (Mac)</li>
+            <li><strong>VYČISTITE CACHE:</strong> Ctrl+Shift+Delete → Vymazať cache</li>
+            <li><strong>INKOGNITO REŽIM:</strong> Otvorte dmv_gui.html v inkognito okne</li>
+            <li><strong>ZATVORTE VŠETKY OKNÁ:</strong> Úplne zatvorte prehliadač a otvorte znovu</li>
+            <li><strong>INÝ PREHLIADAČ:</strong> Skúste otvorit v inom prehliadači (Chrome/Firefox/Edge)</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>ℹ️ Technické informácie:</h2>
+        <p><strong>Súbor:</strong> /home/user/FSSR_DzMV/dmv_gui.html</p>
+        <p><strong>Riadky:</strong></p>
+        <ul>
+            <li>Riadok 220: Spoločnostná sekcia - checkbox r11e</li>
+            <li>Riadok 446: Sekcia pre vozidlo - radio button vR11e</li>
+        </ul>
+        <p><strong>Commit:</strong> 9078786 - "Pridaná možnosť e) pre riadok 11"</p>
+        <p><strong>Dátum commitu:</strong> 20.01.2026 14:53</p>
+    </div>
+
+    <script>
+        // Zobraz timestamp načítania
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date().toLocaleString('sk-SK');
+            const p = document.createElement('p');
+            p.style.cssText = 'text-align: center; color: #666; margin-top: 30px; font-size: 0.9em;';
+            p.innerHTML = `⏰ Súbor načítaný: ${now}`;
+            document.body.appendChild(p);
+        });
+    </script>
+</body>
+</html>
